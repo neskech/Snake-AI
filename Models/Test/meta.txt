@@ -1,0 +1,4 @@
+Population Size: 10
+Generations: 5
+Learning Rate: 0.1
+Board Size: (30, 30)

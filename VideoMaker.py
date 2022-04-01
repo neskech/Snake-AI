@@ -8,17 +8,18 @@ SCREEN_SIZE = (800,800)
 VIEWPORT_SIZE = (800,600)
 VIEWPORT_POS = (0, 200)
 
-BACKGROUND_COLOR = (100,120,40)
-VIEWPORT_COLOR = (3,20,5)
+BACKGROUND_COLOR = (120, 146, 213)
+VIEWPORT_COLOR = (3,18,19)
 SNAKE_COLOR = (250,250,250)
 FOOD_COLOR = (200, 0, 0)
+TEXT_COLOR = (248, 230, 240)
 
 SNAKE_BODY, SNAKE_HEAD, SNAKE_FOOD, EMPTY = 0.0, 1.0, 0.5, -1.0
 
 def toImage(set):
     meta = open(f'./Models/{set}/meta.txt', 'r').readlines()
-    populationSize = meta[0].split(':')[1][1:]
-    learningRate = meta[2].split(':')[1][1:]
+    populationSize = meta[0].split(':')[1][1:-1]
+    learningRate = meta[2].split(':')[1][1:-1]
     size = meta[3].split(':')[1][2:-1].split(',')
     boardSize = Vec2(int(size[0]), int(size[1]))
 
@@ -33,6 +34,7 @@ def toImage(set):
     
     lines = open(f'./Video/Raw/{set}/{set}.txt').readlines()
     i = 0
+    frames = 0
     while i < len(lines): 
             display.fill(BACKGROUND_COLOR)
             pygame.draw.rect(display, VIEWPORT_COLOR, pygame.Rect(VIEWPORT_POS[0], VIEWPORT_POS[1], VIEWPORT_SIZE[0], VIEWPORT_SIZE[1]))
@@ -49,20 +51,20 @@ def toImage(set):
             Props = 0.10
             margins = Vec2(VIEWPORT_POS[0] * Props, VIEWPORT_POS[1] * Props)
             
-            gen = font.render(f'Generation {generation}', True, (230, 220, 230))
-            it = font.render(f'Iteration {iteration}', True, (230, 220, 230))
-            sc = font.render(f'Score {score}', True, (230, 220, 230))
-            hsc = font.render(f'High Score {high_score}', True, (230, 220, 230))
-            fit = font.render(f'Best Fitness {fitness}', True, (230, 220, 230))
-            pop = font.render(f'Population Size {populationSize}', True, (230, 220, 230))
-            learn = font.render(f'Learning Rate {learningRate}', True, (230, 220, 230))
-            display.blit(gen, (margins.x + 150.0, margins.y))
-            display.blit(it, (SCREEN_SIZE[0] - margins.x - 150.0, margins.y))
-            display.blit(sc, (margins.x + 80.0, margins.y + 150.0))
-            display.blit(hsc, (margins.x + 160.0, margins.y + 150.0))
-            display.blit(fit, (margins.x + 240.0, margins.y + 150.0))
-            display.blit(pop, (margins.x + 320.0, margins.y + 150.0))
-            display.blit(learn, (margins.x + 400.0, margins.y + 150.0))
+            gen = font.render(f'Generation {generation}', True, TEXT_COLOR)
+            it = font.render(f'High Score {high_score}', True, TEXT_COLOR)
+            sc = font.render(f'Score {score}', True, TEXT_COLOR)
+            hsc = font.render(f'Iteration {iteration}', True, TEXT_COLOR)
+            fit = font.render(f'Fitness {fitness}', True, TEXT_COLOR)
+            pop = font.render(f'Population Size {populationSize}', True, TEXT_COLOR)
+            learn = font.render(f'Learning Rate {learningRate}', True, TEXT_COLOR)
+            display.blit(gen, (margins.x + 50.0, margins.y))
+            display.blit(sc, (margins.x + 300.0, margins.y))
+            display.blit(it, (margins.x + 550.0, margins.y))
+            display.blit(hsc, (margins.x + 50.0, margins.y + 60.0))
+            display.blit(fit, (margins.x + 300.0, margins.y + 60.0))
+            display.blit(pop, (margins.x + 550.0, margins.y + 60.0))
+            display.blit(learn, (margins.x + 300.0, margins.y + 120.0))
             
             index = 0
             for row in range(boardSize.y):
@@ -84,22 +86,26 @@ def toImage(set):
                     pygame.draw.rect(display, color, pygame.Rect(VIEWPORT_POS[0] + colWidth * col, VIEWPORT_POS[1] + colHeight * row, colWidth, colHeight))
               
             pygame.display.update()      
-            pygame.image.save(display, f'./Video/Image/{set}')           
+            pygame.image.save(display, f'./Video/Image/{set}/{frames}.png')  
+            frames += 1         
             i += 1 #Catch the extra \n at the end there
             
     pygame.quit()
     
     
 
-def toVideo(inPath, outPath):
+def toVideo(set, fps):
       fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
-      video = cv2.VideoWriter(outPath, fourcc, 1, (SCREEN_SIZE[0], SCREEN_SIZE[1]), True)
-      files = [file for file in os.listdir(inPath)]
-      files.sort()
-      for file in files:
-          print(file, ' ' + f'{inPath}/{file}')
-          video.write(cv2.imread(f'{inPath}/{file}'))
+      video = cv2.VideoWriter(f'./Video/Video/{set}/{set}.mp4', fourcc, fps, (SCREEN_SIZE[0], SCREEN_SIZE[1]), True)
+      files = [(int(file[:file.find('.')]), file) for file in os.listdir(f'./Video/Image/{set}')]
+      files.sort(key=lambda x: x[0])
+      for _, file in files:
+          print(file, ' ' + f'./Video/Image/{set}/{file}')
+          video.write(cv2.imread(f'./Video/Image/{set}/{file}'))
           
       cv2.destroyAllWindows()
       video.release()
 
+def deleteImageFolder(set):
+    for file in os.listdir(f'./Video/Image/{set}'):
+        os.remove(f'./Video/Image/{set}/{file}')

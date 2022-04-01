@@ -1,10 +1,14 @@
-from cmath import exp
+from math import exp
 import os
+from pickle import POP
 from random import randint, random
 import sys
+from scipy import rand
+
+from tqdm import tqdm
 from Gene import Gene
 from tensorflow import config
-from tqdm import tqdm
+from VideoMaker import toImage, toVideo
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 devices = config.list_physical_devices("GPU")
@@ -15,15 +19,18 @@ config.experimental.set_memory_growth(devices[0], True)
 #!------------------------------------CONSTANTS------------------------------------------------------------------------------------------------
 #!------------------------------------------------------------------------------------------------------------------------------------------------------
 
-POPULATION_SIZE = 30
-NUM_GENERATIONS = 5
-LEARNING_RATE = 0.1
-ITERATION_OFFSET = 10.0
-BOARD_SIZE = (30, 30)
+POPULATION_SIZE = 100
+NUM_GENERATIONS = 30
+LEARNING_RATE = 0.3
+ITERATION_OFFSET = 1000.0
+BOARD_SIZE = (15, 15)
 SET = 'set-one'
 
+SAVING = True
+
+THRESHOLD = 5
 START_ITERATION_THREHOLD = 50
-FOOD_ITERATION_GAIN = 50
+FOOD_ITERATION_GAIN = 100
 
 #!------------------------------------------------------------------------------------------------------------------------------------------------------
 #!------------------------------------VALIDATION-----------------------------------------------------------------------------------------------
@@ -62,8 +69,9 @@ f.close()
 
 
 
-def save(path, generation):
-    population[0][1].model.save(f'{path}/generation-{generation}')
+def save(set, generation):
+    if SAVING:
+       population[0][1].model.save(f'./Models/{SET}/generation-{generation}')
 
 def writeFrame(path, frameBuffer, generation, score, fitness):
     f = open(path, 'a')
@@ -90,50 +98,70 @@ for a in range(POPULATION_SIZE):
 for a in range(NUM_GENERATIONS):
     #! Make this into a dictionary
     players = [a for a in population]
-    bestGene = players[0][1]
-    bestFitness = -1.0
-    frameBuffer = []
     
-    with tqdm(total=len(players)) as bar:
+    frameBuffer = dict()
+    
+    with tqdm(total=POPULATION_SIZE) as bar:
         while len(players) > 0:
-            
+             
             for index, (_, gene) in enumerate(players):
                 success = gene.updateState()
-                
                 if not success:
-                    population[index][0] = gene.fitness(ITERATION_OFFSET)
-                    if gene is bestGene: bestFitness = population[index][0]
+                   # print('FAIL for index ', index, end=' ')
+                    players[index][0] = gene.fitness(ITERATION_OFFSET)
+                   # print('Fitness for index ', index, ' ', population[index][0] )
+                    
                     players.pop(index)
                     bar.update(1)
                     continue
                 
-                if gene is bestGene:
-                    frameBuffer.append(gene.snakeGame.asBoard())
-        
+                if not frameBuffer.__contains__(gene):
+                    frameBuffer[gene] = []
+                frameBuffer[gene].append(gene.snakeGame.asBoard())
+
                 if gene.snakeGame.score > High_Score:
                     High_Score = gene.snakeGame.score
     
-    population.sort(key=lambda x: x[0])  
-    for index, (_, gene) in enumerate(population):
-        gene.mutate(LEARNING_RATE, index, POPULATION_SIZE)
-        
-    props = 0.20
-    length = int(POPULATION_SIZE * props)
-    for index, (_, gene) in enumerate(population[:length]):
-        randIndex = -1
-        while randIndex != index:    
-            x = random()       
-            #\frac{1}{1\ +\ e^{2-1.3x}}e^{-1.9+3x} on desmos
-            randIndex = int(length * x)
-        gene.crossOver(population[randIndex][1])
-    
+    population.sort(key=lambda x: x[0], reverse=True)  
+    print([fit[0] for fit in population])
     print(f'Generation {a}, High Score {High_Score}')
+    print(f'Highest Fitness: {population[0][0]} Score of Highest Fitness: {population[0][1].snakeGame.score}')
     #print([f'fitness #{index}: {fit[0]}\n' for index, fit in enumerate(population)])
-    print([f'Score #{index}: {fit[1].snakeGame.score}' for index, fit in enumerate(population)])
+    #print([f'Gene #{index} || Score: {fit[1].snakeGame.score} || fitness: {fit[0]}' for index, fit in enumerate(population)])
+    print(f'Average Decision Time: {population[0][1].timeSum / population[0][1].snakeGame.iterations}')
     save(f'./Models/{SET}', generation=a)
-    writeFrame(f'./Video/Raw/{SET}/{SET}.txt', frameBuffer, generation=a, score=bestGene.snakeGame.score, fitness=bestFitness)
+    writeFrame(f'./Video/Raw/{SET}/{SET}.txt', frameBuffer[population[0][1]], generation=a, score=population[0][1].snakeGame.score, fitness=population[0][0])
     
-    for (_, gene) in population:
-          gene.reset()
+    del frameBuffer
+    
+    for c in range(THRESHOLD, POPULATION_SIZE):
+        population[c][1].mutate(LEARNING_RATE, c - THRESHOLD, POPULATION_SIZE)
+        
+    newPop = []
+   # print(f'Lengths {newLength} {oldLength} {POPULATION_SIZE}')
+    while len(newPop) < POPULATION_SIZE - THRESHOLD:
+        #print('Still making it....')
+        randIndexOne, randIndexTwo = -1, -1
+        while randIndexOne == randIndexTwo:  
+            x1 = random() 
+            x2 = random()
+            #\frac{1}{1\ +\ e^{2-1.3x}}e^{-1.9+3x} on desmos
+            randIndexOne = int(min(1.0, exp(-1.9 + 3.0 * x1) / (1.0 + exp(2.0 - 1.3 * x1))) * POPULATION_SIZE)
+            randIndexTwo = int(min(1.0,exp(-1.9 + 3.0 * x2) / (1.0 + exp(2.0 - 1.3 * x2))) * POPULATION_SIZE)
+            #print(f'Guessing {randIndexOne} and {randIndexTwo}')
+            
+        newPop.append([0.0, population[randIndexOne][1].crossOver(population[randIndexTwo][1], START_ITERATION_THREHOLD)])
+     
+    for c in range(THRESHOLD):
+          newPop.append([0.0, population[c][1]]) 
+          newPop[-1][1].reset(START_ITERATION_THREHOLD)
+          
+    del population
+    population = newPop
+    
 
+
+save(SET, 30)
+toImage(SET)
+toVideo(SET,fps=10)
 

@@ -1,4 +1,4 @@
-Population Size: 30
-Generations: 5
-Learning Rate: 0.1
+Population Size: 100
+Generations: 30
+Learning Rate: 0.25
 Board Size: (30, 30)

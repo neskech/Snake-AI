@@ -7,22 +7,18 @@ import pygame
 
 #! Call this snake not game
 class game:
-    def __init__(self, dimensions, screenSize = (0, 0)) -> None:
+    def __init__(self, dimensions) -> None:
         self.dimensions = Vec2(dimensions[0], dimensions[1])
         
+        DIRECTIONS = [Vec2(1, 0), Vec2(-1, 0), Vec2(0, 1), Vec2(0, -1)]
         self.snake = Snake(startLength = 3, 
                            startPos = Vec2(self.dimensions.x // 2, self.dimensions.y // 2 ), 
-                           startDirection = Vec2(1, 0), 
+                           startDirection = DIRECTIONS[int(rand.randint(0, 3))], 
                            foodCallback = self.newFood)
         
         self.score = -1
         self.iterations = 0
-        
-        #ScreenSize of 0,0 means there is no display to be rendered
-        if screenSize != (0, 0):
-            self.cellWidth = screenSize[0] / self.dimensions.x
-            self.cellHeight = screenSize[1] / self.dimensions.y
-        
+    
         self.useConstraints = False
         self.food = Vec2()
         self.newFood()
@@ -35,7 +31,7 @@ class game:
     def newFood(self):
         PROPS = 0.10
         
-        margins = Vec2(PROPS * self.dimensions.x, PROPS * self.dimensions.y)
+        margins = Vec2(int(PROPS * self.dimensions.x), int(PROPS * self.dimensions.y))
         x = rand.randint(0 + margins.x, self.dimensions.x - 1 - margins.x)
         y = rand.randint(0 + margins.y, self.dimensions.y - 1 - margins.y)
         self.food.x = x
@@ -49,7 +45,7 @@ class game:
         self.iterations += 1
         
         if self.useConstraints:
-            if self.iterations == self.iterationThreshold:
+            if self.iterations >= self.iterationThreshold:
                 return False
             
         success: bool = self.snake.advance(foodPos=self.food, dimensions=self.dimensions)
@@ -57,11 +53,18 @@ class game:
 
         return True
             
-    def render(self, display, snakeColor, foodColor):
+    def render(self, display, screenSize, viewPortSize, viewPortPos, snakeColor, foodColor, viewPortColor, font, fontColor):
+        self.cellWidth = viewPortSize.x / self.dimensions.x
+        self.cellHeight = viewPortSize.y / self.dimensions.y
+        
+        scoreImg = font.render(f'Score: {self.score}', True, fontColor)
+        display.blit(scoreImg, (screenSize.x / 2.0 - 100.0, 50.0))
+        pydraw.rect(display, viewPortColor, Rect(viewPortPos.x, viewPortPos.y, viewPortSize.x, viewPortSize.y))
+        
         for pos in self.snake.body:
-            pydraw.rect(display, snakeColor, Rect(self.cellWidth * pos.x, self.cellHeight * pos.y, self.cellWidth, self.cellHeight))
+            pydraw.rect(display, snakeColor, Rect(viewPortPos.x + self.cellWidth * pos.x, viewPortPos.y + self.cellHeight * pos.y, self.cellWidth, self.cellHeight))
             
-        pydraw.rect(display, foodColor, Rect(self.cellWidth * self.food.x, self.cellHeight * self.food.y, self.cellWidth, self.cellHeight))
+        pydraw.rect(display, foodColor, Rect(viewPortPos.x + self.cellWidth * self.food.x, viewPortPos.y + self.cellHeight * self.food.y, self.cellWidth, self.cellHeight))
        
     def handleInput(self, event):
         if event.type == pygame.KEYDOWN:
@@ -84,7 +87,46 @@ class game:
         board[(self.food.y, self.food.x)] = 0.5
         
         return board
-
+    
+    def asVector(self) -> np.ndarray:
+       Direcs = [Vec2(1, 0), Vec2(-1, 0), Vec2(0, 1), Vec2(0, -1), Vec2(1, 1), Vec2(-1, -1), Vec2(1, -1), Vec2(-1, 1)]
+       vector = np.empty(shape=(24,), dtype=np.float32)
+       a = 0
+       for direc in Direcs:
+           vals = self.directionalData(direc)
+           vector[a] = vals[0]
+           vector[a + 1] = vals[1]
+           vector[a + 2] = vals[2]
+           a += 3
+       return vector
+    
+    def directionalData(self, direction):
+        values = [0.0, 0.0, 0.0]
+        newPos = self.snake.body[0] + direction
+        distance = 0.0
+        
+        while not self.snake.wallCollision(newPos, self.dimensions):
+            if newPos.x == self.food.x and newPos.y == self.food.y:
+               values[0] = 1.0
+            elif self.snake.bodyCollision(newPos):
+                values[1] = 1.0
+            newPos = newPos + direction
+            distance += 1.0
+            
+        values[2] = 1 / (1 + distance)
+        return values
+    
+    def reset(self):
+        
+        DIRECTIONS = [Vec2(1, 0), Vec2(-1, 0), Vec2(0, 1), Vec2(0, -1)]
+        self.snake.reset(3, Vec2(self.dimensions.x // 2, self.dimensions.y // 2 ), startDirection = DIRECTIONS[int(rand.randint(0, 3))])
+        
+        self.score = -1
+        self.iterations = 0
+        self.food = Vec2()
+        self.newFood()
+        
+     
 class Snake:
     def __init__(self, startLength, startPos, startDirection, foodCallback) -> None:
         self.body = []
@@ -100,15 +142,23 @@ class Snake:
              
     def checkBounds(self, dimensions) -> bool:
         pos = self.body[0]
-        if pos.x < 0 or pos.x >= dimensions.x or pos.y < 0 or pos.y >= dimensions.y:
+        if self.wallCollision(pos, dimensions):
             return False
         
-        for p in self.body[1:]:
-            if p.x == pos.x and p.y == pos.y:
-                return False
-            
-        return True
+        if self.bodyCollision(pos): 
+            return False
         
+        return True
+    
+    def bodyCollision(self, head) -> bool:
+          for p in self.body[1:]:
+            if p.x == head.x and p.y == head.y:
+                return True
+          return False
+      
+    def wallCollision(self, head, dimensions) -> bool:
+        return head.x < 0 or head.x >= dimensions.x or head.y < 0 or head.y >= dimensions.y
+    
     def advance(self, foodPos, dimensions) -> bool:
         direc = self.body[0] - self.body[1]
         self.body[0] = self.body[0] + self.direction
@@ -134,6 +184,12 @@ class Snake:
             self.body.append(newPos)
             
         return True
+    
+    def reset(self, startLength, startPos, startDirection):
+        self.body = []
+        for a in range(startLength):
+            self.body.append(Vec2(startPos.x + -startDirection.x * a, startPos.y + -startDirection.y * a))
+        
 
 class Vec2:
     def __init__(self, x: int = 0, y: int = 0) -> None:
@@ -151,4 +207,7 @@ class Vec2:
     
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y
+    
+    def distSQ(self, other):
+        return (self.x - other.x) ** 2 + (self.y - other.y) ** 2
     
