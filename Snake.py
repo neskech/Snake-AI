@@ -1,5 +1,4 @@
 
-from pickle import FALSE
 import random as rand
 from pygame import draw as pydraw
 from pygame import Rect
@@ -9,19 +8,20 @@ import pygame
 #! Call this snake not game
 class game:
     def __init__(self, dimensions, screenSize = (0, 0)) -> None:
+        self.dimensions = Vec2(dimensions[0], dimensions[1])
+        
         self.snake = Snake(startLength = 3, 
-                           startPos = Vec2(dimensions.x // 2, dimensions.y // 2 ), 
+                           startPos = Vec2(self.dimensions.x // 2, self.dimensions.y // 2 ), 
                            startDirection = Vec2(1, 0), 
                            foodCallback = self.newFood)
         
-        self.dimensions = dimensions
         self.score = -1
         self.iterations = 0
         
         #ScreenSize of 0,0 means there is no display to be rendered
         if screenSize != (0, 0):
-            self.cellWidth = screenSize[0] / dimensions.x
-            self.cellHeight = screenSize[1] / dimensions.y
+            self.cellWidth = screenSize[0] / self.dimensions.x
+            self.cellHeight = screenSize[1] / self.dimensions.y
         
         self.useConstraints = False
         self.food = Vec2()
@@ -75,7 +75,7 @@ class game:
                 self.snake.changeDirection(Vec2(0, 1))
      
     def asBoard(self) -> np.ndarray:
-        board = np.empty(shape=(self.dimensions.x, self.dimensions.y), dtype=np.float32)
+        board = np.empty(shape=(self.dimensions.x, self.dimensions.y, 1), dtype=np.float32)
         board.fill(-1.0)
         
         board[(self.snake.body[0].y, self.snake.body[0].x)] = 1.0
@@ -88,7 +88,6 @@ class game:
 class Snake:
     def __init__(self, startLength, startPos, startDirection, foodCallback) -> None:
         self.body = []
-        print(f'START HEHEHE {startLength} {startDirection}')
         for a in range(startLength):
             self.body.append(Vec2(startPos.x + -startDirection.x * a, startPos.y + -startDirection.y * a))
             
@@ -102,13 +101,13 @@ class Snake:
     def checkBounds(self, dimensions) -> bool:
         pos = self.body[0]
         if pos.x < 0 or pos.x >= dimensions.x or pos.y < 0 or pos.y >= dimensions.y:
-            return True
+            return False
         
-        for p in self.body:
+        for p in self.body[1:]:
             if p.x == pos.x and p.y == pos.y:
-                return True
+                return False
             
-        return False
+        return True
         
     def advance(self, foodPos, dimensions) -> bool:
         direc = self.body[0] - self.body[1]
