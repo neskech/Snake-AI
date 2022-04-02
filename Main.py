@@ -1,9 +1,7 @@
 from math import exp
 import os
-from pickle import POP
-from random import randint, random
+from random import random
 import sys
-from scipy import rand
 
 from tqdm import tqdm
 from Gene import Gene
@@ -21,16 +19,16 @@ config.experimental.set_memory_growth(devices[0], True)
 
 POPULATION_SIZE = 100
 NUM_GENERATIONS = 30
-LEARNING_RATE = 0.3
+LEARNING_RATE = 0.1
 ITERATION_OFFSET = 1000.0
-BOARD_SIZE = (15, 15)
-SET = 'set-one'
+BOARD_SIZE = (30, 30)
+SET = 'set-three'
 
-SAVING = True
+GENERATIONAL_SAVES = [0, 1, 8, 20, 21, 22, 25, 28, 29]
 
 THRESHOLD = 5
-START_ITERATION_THREHOLD = 50
-FOOD_ITERATION_GAIN = 100
+START_ITERATION_THREHOLD = 75
+FOOD_ITERATION_GAIN = 50
 
 #!------------------------------------------------------------------------------------------------------------------------------------------------------
 #!------------------------------------VALIDATION-----------------------------------------------------------------------------------------------
@@ -69,8 +67,8 @@ f.close()
 
 
 
-def save(set, generation):
-    if SAVING:
+def save(generation):
+    if generation in GENERATIONAL_SAVES:
        population[0][1].model.save(f'./Models/{SET}/generation-{generation}')
 
 def writeFrame(path, frameBuffer, generation, score, fitness):
@@ -96,51 +94,43 @@ for a in range(POPULATION_SIZE):
     
 
 for a in range(NUM_GENERATIONS):
-    #! Make this into a dictionary
-    players = [a for a in population]
-    
+    players = [a for a in population] 
     frameBuffer = dict()
     
     with tqdm(total=POPULATION_SIZE) as bar:
-        while len(players) > 0:
-             
+        while len(players) > 0:         
             for index, (_, gene) in enumerate(players):
+                
                 success = gene.updateState()
                 if not success:
-                   # print('FAIL for index ', index, end=' ')
-                    players[index][0] = gene.fitness(ITERATION_OFFSET)
-                   # print('Fitness for index ', index, ' ', population[index][0] )
-                    
+                    players[index][0] = gene.fitness(ITERATION_OFFSET)           
                     players.pop(index)
                     bar.update(1)
                     continue
                 
                 if not frameBuffer.__contains__(gene):
                     frameBuffer[gene] = []
+                    
                 frameBuffer[gene].append(gene.snakeGame.asBoard())
 
                 if gene.snakeGame.score > High_Score:
                     High_Score = gene.snakeGame.score
     
-    population.sort(key=lambda x: x[0], reverse=True)  
-    print([fit[0] for fit in population])
-    print(f'Generation {a}, High Score {High_Score}')
-    print(f'Highest Fitness: {population[0][0]} Score of Highest Fitness: {population[0][1].snakeGame.score}')
-    #print([f'fitness #{index}: {fit[0]}\n' for index, fit in enumerate(population)])
-    #print([f'Gene #{index} || Score: {fit[1].snakeGame.score} || fitness: {fit[0]}' for index, fit in enumerate(population)])
-    print(f'Average Decision Time: {population[0][1].timeSum / population[0][1].snakeGame.iterations}')
-    save(f'./Models/{SET}', generation=a)
-    writeFrame(f'./Video/Raw/{SET}/{SET}.txt', frameBuffer[population[0][1]], generation=a, score=population[0][1].snakeGame.score, fitness=population[0][0])
     
+    population.sort(key=lambda x: x[0], reverse=True)  
+    
+    print(f'Generation {a}, High Score {High_Score}')
+    print(f'Highest Fitness: {population[0][0]} ||  Score of Highest Fitness: {population[0][1].snakeGame.score}')
+    
+    save(generation=a)
+    writeFrame(f'./Video/Raw/{SET}/{SET}.txt', frameBuffer[population[0][1]], generation=a, score=population[0][1].snakeGame.score, fitness=population[0][0])  
     del frameBuffer
     
     for c in range(THRESHOLD, POPULATION_SIZE):
         population[c][1].mutate(LEARNING_RATE, c - THRESHOLD, POPULATION_SIZE)
         
     newPop = []
-   # print(f'Lengths {newLength} {oldLength} {POPULATION_SIZE}')
     while len(newPop) < POPULATION_SIZE - THRESHOLD:
-        #print('Still making it....')
         randIndexOne, randIndexTwo = -1, -1
         while randIndexOne == randIndexTwo:  
             x1 = random() 
@@ -148,7 +138,6 @@ for a in range(NUM_GENERATIONS):
             #\frac{1}{1\ +\ e^{2-1.3x}}e^{-1.9+3x} on desmos
             randIndexOne = int(min(1.0, exp(-1.9 + 3.0 * x1) / (1.0 + exp(2.0 - 1.3 * x1))) * POPULATION_SIZE)
             randIndexTwo = int(min(1.0,exp(-1.9 + 3.0 * x2) / (1.0 + exp(2.0 - 1.3 * x2))) * POPULATION_SIZE)
-            #print(f'Guessing {randIndexOne} and {randIndexTwo}')
             
         newPop.append([0.0, population[randIndexOne][1].crossOver(population[randIndexTwo][1], START_ITERATION_THREHOLD)])
      
@@ -161,7 +150,6 @@ for a in range(NUM_GENERATIONS):
     
 
 
-save(SET, 30)
 toImage(SET)
 toVideo(SET,fps=10)
 

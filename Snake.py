@@ -5,7 +5,12 @@ from pygame import Rect
 import numpy as np
 import pygame
 
-#! Call this snake not game
+#!-----------------------------------------------------------------------------------------------------------------------------------------------------------
+#!-----------------------------------------------------------------------------------------------------------------------------------------------------------
+#!----------------------------SNAKE GAME AND A VECTOR UTILITY CLASS------------------------------------------------------------------------------------------
+#!-----------------------------------------------------------------------------------------------------------------------------------------------------------
+#!-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
 class game:
     def __init__(self, dimensions) -> None:
         self.dimensions = Vec2(dimensions[0], dimensions[1])
@@ -32,8 +37,11 @@ class game:
         PROPS = 0.10
         
         margins = Vec2(int(PROPS * self.dimensions.x), int(PROPS * self.dimensions.y))
-        x = rand.randint(0 + margins.x, self.dimensions.x - 1 - margins.x)
-        y = rand.randint(0 + margins.y, self.dimensions.y - 1 - margins.y)
+        
+        x, y = self.snake.body[1].x, self.snake.body[1].y
+        while self.snake.bodyCollision(Vec2(x, y)):
+            x = rand.randint(0 + margins.x, self.dimensions.x - 1 - margins.x)
+            y = rand.randint(0 + margins.y, self.dimensions.y - 1 - margins.y)
         self.food.x = x
         self.food.y = y
         
@@ -116,8 +124,7 @@ class game:
         values[2] = 1 / (1 + distance)
         return values
     
-    def reset(self):
-        
+    def reset(self):      
         DIRECTIONS = [Vec2(1, 0), Vec2(-1, 0), Vec2(0, 1), Vec2(0, -1)]
         self.snake.reset(3, Vec2(self.dimensions.x // 2, self.dimensions.y // 2 ), startDirection = DIRECTIONS[int(rand.randint(0, 3))])
         

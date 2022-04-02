@@ -1,6 +1,5 @@
 
 
-import time
 from random import random
 from Snake import game
 from Snake import Vec2
@@ -9,13 +8,19 @@ from tensorflow.keras import layers
 from tensorflow.keras import Sequential
 import numpy as np
 
+#!-----------------------------------------------------------------------------------------------------------------------------------------------------------
+#!-----------------------------------------------------------------------------------------------------------------------------------------------------------
+#!----------------------------GENETIC REPRESENTATION OF THE SNAKE AND ITS 'BRAIN'----------------------------------------------------------------------------
+#!-----------------------------------------------------------------------------------------------------------------------------------------------------------
+#!-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
 DIRECTIONS = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
 class Gene:
     def __init__(self, boardSize) -> None:
         self.boardSize = boardSize
         
-        self.snakeGame = game(boardSize, (0, 0))
+        self.snakeGame = game(boardSize)
         
         self.model = Sequential([
              tf.keras.Input(shape=(24,)),
@@ -24,9 +29,7 @@ class Gene:
              layers.Dense(4, activation='softmax')
         ])
         self.model.compile()
-        
-        self.timeSum = 0.0
-        #print(self.model.summary())
+    
     
     def combine(self, ConvWeights, DenseWeights):
          a, b = 0, 0
@@ -41,14 +44,11 @@ class Gene:
 
     def updateState(self) -> bool:
         board = self.snakeGame.asVector()
-
-        start = time.time()
+        
         model_output = np.argmax(self.model.predict_step(np.expand_dims(board, axis=0)))
         direction = DIRECTIONS[model_output]
         direction = Vec2(direction[0], direction[1])
-        elapsed = time.time() - start
-        self.timeSum += elapsed
-       # print(f'Direc index {model_output} || Direction {direction} || time {time.time() - start}')
+
         del board
         
         self.snakeGame.snake.changeDirection(direction)

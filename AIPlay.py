@@ -5,10 +5,16 @@ import sys
 from Snake import Vec2, game
 from numpy import expand_dims, argmax
 
-Set = 'set-four'
-Generation = 30
+#!-----------------------------------------------------------------------------------------------------------------------------------------------------------
+#!-----------------------------------------------------------------------------------------------------------------------------------------------------------
+#!----------------------------LOADS A MODEL FROM THE MODELS FOLDER AND LETS IT PLAY THE GAME IN REAL TIME----------------------------------------------------
+#!-----------------------------------------------------------------------------------------------------------------------------------------------------------
+#!-----------------------------------------------------------------------------------------------------------------------------------------------------------
 
-model = tf.keras._load(f'./Models/{Set}/Generation-{Generation}')
+Set = 'set-two'
+Generation = 29
+
+model = tf.keras.models.load_model(f'./Models/{Set}/Generation-{Generation}')
 
 SCREEN_SIZE = Vec2(500, 500)
 VIEWPORT_SIZE = Vec2(500, 400)
@@ -23,7 +29,7 @@ FramePerSec = pygame.time.Clock()
 displaysurface = pygame.display.set_mode((SCREEN_SIZE.x, SCREEN_SIZE.y))
 pygame.display.set_caption("Game")
 
-snakeGame = game(BOARD, displaysurface.get_size())
+snakeGame = game(BOARD)
 pygame.display.flip()
 
 font = pygame.font.Font(None, 30)
@@ -36,7 +42,9 @@ while True:
     
     modelInput = snakeGame.asVector()
     modelOutput = model.predict_step(expand_dims(modelInput, axis=0))
-    direction = DIRECTIONS[argmax(input)]
+    print(modelOutput)
+    direction = DIRECTIONS[argmax(modelOutput)]
+    print(direction)
     snakeGame.snake.changeDirection(direction)
     
     displaysurface.fill((10,100,150))
