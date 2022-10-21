@@ -8,27 +8,35 @@ from Gene import Gene
 from tensorflow import config
 from VideoMaker import toImage, toVideo
 
+""""
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 devices = config.list_physical_devices("GPU")
 config.experimental.set_memory_growth(devices[0], True)
+"""
+
+physical_devices = config.list_physical_devices('GPU') 
+config.set_visible_devices(physical_devices[1:], 'GPU') 
+logical_devices = config.list_logical_devices('GPU') 
+assert len(logical_devices) == len(physical_devices) - 1
 
 
 #!------------------------------------------------------------------------------------------------------------------------------------------------------
 #!------------------------------------CONSTANTS------------------------------------------------------------------------------------------------
 #!------------------------------------------------------------------------------------------------------------------------------------------------------
 
-POPULATION_SIZE = 100
+POPULATION_SIZE = 50
 NUM_GENERATIONS = 30
-LEARNING_RATE = 0.1
+LEARNING_RATE = 0.25
 ITERATION_OFFSET = 1000.0
 BOARD_SIZE = (30, 30)
-SET = 'set-three'
+SET = 'set-two'
 
 GENERATIONAL_SAVES = [0, 1, 8, 20, 21, 22, 25, 28, 29]
 
 THRESHOLD = 5
 START_ITERATION_THREHOLD = 75
 FOOD_ITERATION_GAIN = 50
+SELECTION_PROPORTION = 0.4
 
 #!------------------------------------------------------------------------------------------------------------------------------------------------------
 #!------------------------------------VALIDATION-----------------------------------------------------------------------------------------------
@@ -82,7 +90,12 @@ def writeFrame(path, frameBuffer, generation, score, fitness):
                 f.write(f'{frame[a][b][0]} ')
             f.write('\n')
         f.write('\n')
-    
+
+def select():
+    x = random()
+    if SELECTION_PROPORTION == 1.0:
+        return min(1.0, exp(-1.9 + 3.0 * x1) / (1.0 + exp(2.0 - 1.3 * x1))) * POPULATION_SIZE
+    return POPULATION_SIZE * SELECTION_PROPORTION * x    
     
 High_Score = -1
 population = []
@@ -133,11 +146,8 @@ for a in range(NUM_GENERATIONS):
     while len(newPop) < POPULATION_SIZE - THRESHOLD:
         randIndexOne, randIndexTwo = -1, -1
         while randIndexOne == randIndexTwo:  
-            x1 = random() 
-            x2 = random()
-            #\frac{1}{1\ +\ e^{2-1.3x}}e^{-1.9+3x} on desmos
-            randIndexOne = int(min(1.0, exp(-1.9 + 3.0 * x1) / (1.0 + exp(2.0 - 1.3 * x1))) * POPULATION_SIZE)
-            randIndexTwo = int(min(1.0,exp(-1.9 + 3.0 * x2) / (1.0 + exp(2.0 - 1.3 * x2))) * POPULATION_SIZE)
+            randIndexOne = int(select())
+            randIndexTwo = int(select())
             
         newPop.append([0.0, population[randIndexOne][1].crossOver(population[randIndexTwo][1], START_ITERATION_THREHOLD)])
      

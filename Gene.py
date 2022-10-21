@@ -24,8 +24,8 @@ class Gene:
         
         self.model = Sequential([
              tf.keras.Input(shape=(24,)),
-             layers.Dense(20, activation='relu'),
-             layers.Dense(20, activation='relu'),
+             layers.Dense(40, activation='relu'),
+             layers.Dense(40, activation='relu'),
              layers.Dense(4, activation='softmax')
         ])
         self.model.compile()
