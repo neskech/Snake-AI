@@ -94,7 +94,9 @@ class Gene:
         newGene.combine(ConvWeights, DenseWeights)
         return newGene
     
-    def fitness(self, iterOffset):    
+    def fitness(self, iterOffset):  
+        #IterOffset makes having higher iteration count (longer life) less desirable
+        #Than having a lot of score / food  
         return 10 ** self.snakeGame.score * (self.snakeGame.iterations / iterOffset)
     
     def reset(self, startIterationThreshold):

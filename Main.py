@@ -24,14 +24,25 @@ assert len(logical_devices) == len(physical_devices) - 1
 #!------------------------------------CONSTANTS------------------------------------------------------------------------------------------------
 #!------------------------------------------------------------------------------------------------------------------------------------------------------
 
-POPULATION_SIZE = 50
-NUM_GENERATIONS = 30
-LEARNING_RATE = 0.25
-ITERATION_OFFSET = 1000.0
-BOARD_SIZE = (30, 30)
+#Which folder to save the video information to
+#As training occurs, the data about the game is sent to text files in the Video/Raw/ directory
+#At the end, we utilize pygame to take the given text file and transform it into images in Video/Image
+#After that, we use cv2 to transform those images into a .mp4 in Video/Video. The images are then deleted
 SET = 'set-two'
 
-GENERATIONAL_SAVES = [0, 1, 8, 20, 21, 22, 25, 28, 29]
+#Population size in the genetic algorithim
+POPULATION_SIZE = 50
+#Number of generations the genetic algorithim will iterate over
+NUM_GENERATIONS = 30
+#Learning rate
+LEARNING_RATE = 0.25
+#The higher this number is, the less the AI will favor surviving 
+#And the more it will favor getting 'food' aka score
+ITERATION_OFFSET = 1000.0
+BOARD_SIZE = (30, 30) #Size of the game board in tiles
+
+#When to save the model
+GENERATIONAL_SAVES = [0, 1, 8, 20, 21, 22, 25, 28, 29] 
 
 THRESHOLD = 5
 START_ITERATION_THREHOLD = 75
@@ -94,7 +105,7 @@ def writeFrame(path, frameBuffer, generation, score, fitness):
 def select():
     x = random()
     if SELECTION_PROPORTION == 1.0:
-        return min(1.0, exp(-1.9 + 3.0 * x1) / (1.0 + exp(2.0 - 1.3 * x1))) * POPULATION_SIZE
+        return min(1.0, exp(-1.9 + 3.0 * x) / (1.0 + exp(2.0 - 1.3 * x))) * POPULATION_SIZE
     return POPULATION_SIZE * SELECTION_PROPORTION * x    
     
 High_Score = -1
@@ -159,7 +170,8 @@ for a in range(NUM_GENERATIONS):
     population = newPop
     
 
-
+#Converts the text files to images
 toImage(SET)
+#Then converts the images to a .mp4, deleting the images
 toVideo(SET,fps=10)
 
