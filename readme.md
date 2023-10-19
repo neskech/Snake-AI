@@ -2,6 +2,8 @@
 
 A genetic algorithim that gradually increases an AI's performance at the game 'Snake'
 
+I made this project in high school so dont expect much from the code quality :)
+
 
 # How to Use
   -
